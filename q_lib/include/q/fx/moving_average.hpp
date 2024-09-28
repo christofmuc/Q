@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -7,12 +7,12 @@
 #define CYCFI_Q_EXP_MOVING_AVERAGE_DECEMBER_7_2018
 
 #include <q/support/base.hpp>
-#include <q/utility/ring_buffer.hpp>
+#include <q/fx/moving_sum.hpp>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
    ////////////////////////////////////////////////////////////////////////////
-   // The moving average is the simplest and most efficient FIR filter. It is
+   // The moving_average is the simplest and most efficient FIR filter. It is
    // also the most common filter in DSP primarily due to its simplicity. But
    // while it is technically a low pass FIR filter, it performs poorly in
    // the frequency domain with very slow roll-off and dreadful stopband
@@ -20,56 +20,36 @@ namespace cycfi { namespace q
    // domain. The moving average filter is optimal in reducing random noise
    // while retaining a sharp step response.
    //
-   // Averaging N samples (the moving average length) increases the SNR by
-   // the square root of N. For example, N=16 improves SNR by 4 (12dB).
+   // Averaging N samples (the moving average window size) increases the SNR
+   // by the square root of N. For example, N=16 improves SNR by 4 (12dB).
    // The filter delay is exactly (N−1)/2.
    //
-   // This filter is implemented using a ring_buffer. The data type, T, is a
-   // template parameter, allowing both floating point as well as integer
-   // computations. Integers are typically faster than floating point and are
-   // not prone to round-off errors.
+   // The data type, T, is a template parameter, allowing both floating point
+   // as well as integer computations. Integers are typically faster than
+   // floating point and are not prone to round-off errors.
    //
-   // Take note that the final result is not divided by the moving average
-   // length, N. Only the sum is returned, which gives the filter a gain of
-   // N. The fixed gain, N, can be compensated elsewhere. This makes the
-   // filter very fast, requiring only one addition and one subtraction per
-   // sample.
+   // moving_average is a subclass of the moving_sum.
    ////////////////////////////////////////////////////////////////////////////
    template <typename T>
-   struct moving_average
+   struct basic_moving_average : basic_moving_sum<T>
    {
-      moving_average(std::size_t size)
-       : _buff(size)
-       , _size(size)
-      {
-         _buff.clear();
-      }
+      using basic_moving_sum<T>::basic_moving_sum;
+      using value_type = T;
 
       T operator()(T s)
       {
-         _sum += s;              // Add the latest sample to the sum
-         _sum -= _buff[_size-1]; // Subtract the oldest sample from the sum
-         _buff.push(s);          // Push the latest sample, erasing the oldest
-         return _sum;            // Return the sum (gain == size)
+         basic_moving_sum<T>::operator()(s);
+         return (*this)();
       }
 
       T operator()() const
       {
-         return _sum;
+         // Return the average
+         return this->sum() / this->size();
       }
-
-      std::size_t size() const
-      {
-         return _size;
-      }
-
-      using buffer = ring_buffer<T>;
-      using accumulator = decltype(promote(T()));
-
-      buffer      _buff = buffer{};
-      std::size_t _size;
-      accumulator _sum = 0;
    };
+
+   using moving_average = basic_moving_average<float>;
 
    ////////////////////////////////////////////////////////////////////////////
    // Exponential moving average approximates an arithmetic moving average by
@@ -81,11 +61,14 @@ namespace cycfi { namespace q
    // the arithmetic average pretty well.
    //
    //    n: the number of samples.
-   //    y: current value
+   //    y: current value.
    //
    // See: https://www.dsprelated.com/showthread/comp.dsp/47981-1.php
+   //
+   // The exp_moving_average<n> template computes b at compile-time, where n
+   // is supplied as a compile-time parameter.
    ////////////////////////////////////////////////////////////////////////////
-   template <int n>
+   template <std::size_t n>
    struct exp_moving_average
    {
       static constexpr float b = 2.0f / (n + 1);
@@ -113,6 +96,68 @@ namespace cycfi { namespace q
 
       float y = 0.0f;
    };
-}}
+
+   ////////////////////////////////////////////////////////////////////////////
+   // The rt_exp_moving_average class computes b at run time, where n is
+   // supplied as a runtime parameter.
+   ////////////////////////////////////////////////////////////////////////////
+   struct rt_exp_moving_average
+   {
+      rt_exp_moving_average(float n, float y_ = 0.0f)
+       : y(y_)
+       , b(2.0f / (n + 1))
+       , b_(1.0f - b)
+      {}
+
+      rt_exp_moving_average(duration d, float sps, float y_ = 0.0f)
+       : rt_exp_moving_average(std::size_t(sps * as_float(d)), y_)
+      {}
+
+      float operator()(float s)
+      {
+         return y = b * s + b_ * y;
+      }
+
+      float operator()() const
+      {
+         return y;
+      }
+
+      rt_exp_moving_average& operator=(float y_)
+      {
+         y = y_;
+         return *this;
+      }
+
+      void width(float n)
+      {
+         b = 2.0f / (n + 1);
+      }
+
+      float y = 0.0f;
+      float b, b_;
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Simple 2-point average filter
+   ////////////////////////////////////////////////////////////////////////////
+   struct moving_average2
+   {
+      float operator()(float s)
+      {
+         y = (s + _prev) / 2.0f;
+         _prev = s;
+         return y;
+      }
+
+      float operator()() const
+      {
+         return y;
+      }
+
+      float y = 0.0f;
+      float _prev= 0.0f;
+   };
+}
 
 #endif

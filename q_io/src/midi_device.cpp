@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -8,7 +8,7 @@
 #include <portmidi.h>
 #include <string>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
    struct midi_device::impl
    {
@@ -93,5 +93,5 @@ namespace cycfi { namespace q
          result.push_back(impl);
       return std::move(result);
    }
-}}
+}
 

@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -7,7 +7,7 @@
 #include <infra/assert.hpp>
 #include <portaudio.h>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
    namespace detail
    {
@@ -21,15 +21,15 @@ namespace cycfi { namespace q
        , void* user_data
       )
       {
-         auto this_ = static_cast<port_audio_stream*>(user_data);
+         auto this_ = static_cast<audio_stream*>(user_data);
          auto input = reinterpret_cast<float const**>(const_cast<void*>(input_));
          auto output = reinterpret_cast<float**>(output_);
 
          CYCFI_ASSERT(input && output, "Error! No input and/or output channels.");
 
          this_->process(
-            audio_channels<float const>{ input, this_->input_channels(), frame_count }
-            , audio_channels<float>{ output, this_->output_channels(), frame_count }
+            multi_buffer<float const>{input, this_->input_channels(), frame_count }
+          , multi_buffer<float>{output, this_->output_channels(), frame_count }
          );
          return 0;
       }
@@ -44,13 +44,13 @@ namespace cycfi { namespace q
        , void* user_data
       )
       {
-         auto this_ = static_cast<port_audio_stream*>(user_data);
+         auto this_ = static_cast<audio_stream*>(user_data);
          auto input = reinterpret_cast<float const**>(const_cast<void*>(input_));
 
          CYCFI_ASSERT(input, "Error! No input channel.");
 
          this_->process(
-            audio_channels<float const>{ input, this_->input_channels(), frame_count }
+                 multi_buffer<float const>{input, this_->input_channels(), frame_count }
          );
 
          return 0;
@@ -66,13 +66,13 @@ namespace cycfi { namespace q
        , void* user_data
       )
       {
-         auto this_ = static_cast<port_audio_stream*>(user_data);
+         auto this_ = static_cast<audio_stream*>(user_data);
          auto output = reinterpret_cast<float**>(output_);
 
          CYCFI_ASSERT(output, "Error! No output channel.");
 
          this_->process(
-            audio_channels<float>{ output, this_->output_channels(), frame_count }
+                 multi_buffer<float>{output, this_->output_channels(), frame_count }
          );
 
          return 0;
@@ -82,11 +82,11 @@ namespace cycfi { namespace q
       port_audio_init const& portaudio_init();
    }
 
-   port_audio_stream::port_audio_stream(
+   audio_stream::audio_stream(
       audio_device const& device
     , std::size_t input_channels
     , std::size_t output_channels
-    , int sps
+    , double sps
     , int frames
    )
    {
@@ -105,20 +105,26 @@ namespace cycfi { namespace q
       auto id = device.id();
 
       PaStreamParameters in_params;
-      in_params.channelCount = input_channels;
-      in_params.device = id;
-      in_params.hostApiSpecificStreamInfo = nullptr;
-      in_params.sampleFormat = paFloat32 | paNonInterleaved;
-      in_params.suggestedLatency = Pa_GetDeviceInfo(id)->defaultLowInputLatency;
-      in_params.hostApiSpecificStreamInfo = nullptr;
+      if (input_channels)
+      {
+         in_params.channelCount = input_channels;
+         in_params.device = id;
+         in_params.hostApiSpecificStreamInfo = nullptr;
+         in_params.sampleFormat = paFloat32 | paNonInterleaved;
+         in_params.suggestedLatency = Pa_GetDeviceInfo(id)->defaultLowInputLatency;
+         in_params.hostApiSpecificStreamInfo = nullptr;
+      }
 
       PaStreamParameters out_params;
-      out_params.channelCount = output_channels;
-      out_params.device = id;
-      out_params.hostApiSpecificStreamInfo = nullptr;
-      out_params.sampleFormat = paFloat32 | paNonInterleaved;
-      out_params.suggestedLatency = Pa_GetDeviceInfo(id)->defaultLowOutputLatency;
-      out_params.hostApiSpecificStreamInfo = nullptr;
+      if (output_channels)
+      {
+         out_params.channelCount = output_channels;
+         out_params.device = id;
+         out_params.hostApiSpecificStreamInfo = nullptr;
+         out_params.sampleFormat = paFloat32 | paNonInterleaved;
+         out_params.suggestedLatency = Pa_GetDeviceInfo(id)->defaultLowOutputLatency;
+         out_params.hostApiSpecificStreamInfo = nullptr;
+      }
 
       auto callback = (input_channels && output_channels)?
          detail::audio_stream_callback1 :
@@ -127,7 +133,8 @@ namespace cycfi { namespace q
 
       auto err = Pa_OpenStream(
          reinterpret_cast<void**>(&_impl)
-       , &in_params, &out_params
+       , input_channels? &in_params : nullptr
+       , output_channels? &out_params : nullptr
        , sps, frames
        , paNoFlag, callback, this
       );
@@ -138,10 +145,10 @@ namespace cycfi { namespace q
       }
    }
 
-   port_audio_stream::port_audio_stream(
+   audio_stream::audio_stream(
       std::size_t input_channels
     , std::size_t output_channels
-    , int sps
+    , double sps
     , int frames
    )
    {
@@ -176,7 +183,7 @@ namespace cycfi { namespace q
       }
    }
 
-   port_audio_stream::~port_audio_stream()
+   audio_stream::~audio_stream()
    {
       if (is_valid())
       {
@@ -185,51 +192,51 @@ namespace cycfi { namespace q
       }
    }
 
-   void port_audio_stream::start()
+   void audio_stream::start()
    {
       if (is_valid())
          Pa_StartStream(_impl);
    }
 
-   void port_audio_stream::stop()
+   void audio_stream::stop()
    {
       if (is_valid())
          Pa_StopStream(_impl);
    }
 
-   duration port_audio_stream::input_latency() const
+   duration audio_stream::input_latency() const
    {
       if (is_valid())
          return duration(Pa_GetStreamInfo(_impl)->inputLatency);
       return {};
    }
 
-   duration port_audio_stream::output_latency() const
+   duration audio_stream::output_latency() const
    {
       if (is_valid())
          return duration(Pa_GetStreamInfo(_impl)->outputLatency);
       return {};
    }
 
-   std::uint32_t port_audio_stream::sampling_rate() const
+   double audio_stream::sampling_rate() const
    {
       if (is_valid())
          return Pa_GetStreamInfo(_impl)->sampleRate;
       return 0;
    }
 
-   duration port_audio_stream::time() const
+   duration audio_stream::time() const
    {
       if (is_valid())
          return duration{ Pa_GetStreamTime(_impl) };
       return {};
    }
 
-   double port_audio_stream::cpu_load() const
+   double audio_stream::cpu_load() const
    {
       if (is_valid())
          return Pa_GetStreamCpuLoad(_impl);
       return -1;
    }
-}}
+}
 

@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -8,7 +8,7 @@
 #include <q/fx/moving_maximum.hpp>
 #include <vector>
 #include <string>
-#include "notes.hpp"
+#include "pitch.hpp"
 
 namespace q = cycfi::q;
 using namespace q::literals;
@@ -16,7 +16,7 @@ using namespace notes;
 
 void process(
    std::string name, std::vector<float> const& in
- , std::uint32_t sps, std::size_t n)
+ , float sps, std::size_t n)
 {
    constexpr auto n_channels = 2;
    std::vector<float> out(in.size() * n_channels);
@@ -55,14 +55,14 @@ void process(std::string name, q::frequency f)
    // Read audio file
 
    q::wav_reader src{"audio_files/" + name + ".wav"};
-   std::uint32_t const sps = src.sps();
+   float const sps = src.sps();
 
    std::vector<float> in(src.length());
    src.read(in);
 
    ////////////////////////////////////////////////////////////////////////////
    auto period = f.period();
-   std::size_t n = float(period) * sps;
+   std::size_t n = as_float(period) * sps;
    process(name, in, sps, n * 1.1);
 }
 

@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -7,12 +7,12 @@
 #define CYCFI_Q_BIQUAD_HPP_FEBRUARY_8_2018
 
 #include <q/support/base.hpp>
+#include <q/support/frequency.hpp>
+#include <q/support/literals.hpp>
 #include <cmath>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
-   using namespace q::literals;
-
    ////////////////////////////////////////////////////////////////////////////
    // biquad class. Based on Audio-EQ Cookbook by Robert Bristow-Johnson.
    // https://www.w3.org/2011/audio/audio-eq-cookbook.html
@@ -71,19 +71,19 @@ namespace cycfi { namespace q
       /////////////////////////////////////////////////////////////////////////
       struct config_biquad
       {
-         config_biquad(frequency f, std::uint32_t sps)
-          : omega(2_pi * double(f) / sps)
+         config_biquad(frequency f, float sps)
+          : omega(2_pi * as_double(f) / sps)
           , sin(std::sin(omega))
           , cos(std::cos(omega))
          {}
 
-         config_biquad(frequency f, std::uint32_t sps, bw _bw)
+         config_biquad(frequency f, float sps, bw _bw)
           : config_biquad(f, sps)
          {
             alpha = sin * std::sinh(std::log(2.0) / 2.0 * _bw.val * omega / sin);
          }
 
-         config_biquad(frequency f, std::uint32_t sps, double q)
+         config_biquad(frequency f, float sps, double q)
           : config_biquad(f, sps)
          {
             alpha = sin / (2.0 * q);
@@ -106,13 +106,13 @@ namespace cycfi { namespace q
       /////////////////////////////////////////////////////////////////////////
       struct config_biquad_a : config_biquad
       {
-    	  config_biquad_a(double db_gain, frequency f, std::uint32_t sps, bw _bw)
+         config_biquad_a(double db_gain, frequency f, float sps, bw _bw)
           : config_biquad(f, sps, _bw)
           , a(std::pow(10.0, db_gain / 40.0))
           , beta(std::sqrt(a + a))
          {}
 
-    	  config_biquad_a(double db_gain, frequency f, std::uint32_t sps, double q)
+         config_biquad_a(double db_gain, frequency f, float sps, double q)
           : config_biquad(f, sps, q)
           , a(std::pow(10.0, db_gain / 40.0))
           , beta(std::sqrt(a + a))
@@ -125,7 +125,7 @@ namespace cycfi { namespace q
       /////////////////////////////////////////////////////////////////////////
       struct config_lowpass : config_biquad
       {
-         config_lowpass(frequency f, std::uint32_t sps, double q)
+         config_lowpass(frequency f, float sps, double q)
           : config_biquad(f, sps, q)
          {
             init();
@@ -133,19 +133,19 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = (1.0 - cos) / 2.0;
-				b1 = 1.0 - cos;
-				b2 = (1.0 - cos) / 2.0;
-				a0 = 1.0 + alpha;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha;
+            b0 = (1.0 - cos) / 2.0;
+            b1 = 1.0 - cos;
+            b2 = (1.0 - cos) / 2.0;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_highpass : config_biquad
       {
-         config_highpass(frequency f, std::uint32_t sps, double q)
+         config_highpass(frequency f, float sps, double q)
           : config_biquad(f, sps, q)
          {
             init();
@@ -153,25 +153,25 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = (1.0 + cos) / 2.0;
-				b1 = -(1.0 + cos);
-				b2 = (1.0 + cos) / 2.0;
-				a0 = 1.0 + alpha;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha;
+            b0 = (1.0 + cos) / 2.0;
+            b1 = -(1.0 + cos);
+            b2 = (1.0 + cos) / 2.0;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_bandpass_csg : config_biquad
       {
-         config_bandpass_csg(frequency f, std::uint32_t sps, bw _bw)
+         config_bandpass_csg(frequency f, float sps, bw _bw)
           : config_biquad(f, sps, _bw)
          {
             init();
          }
 
-         config_bandpass_csg(frequency f, std::uint32_t sps, double q)
+         config_bandpass_csg(frequency f, float sps, double q)
           : config_biquad(f, sps, q)
          {
             init();
@@ -179,25 +179,25 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = sin / 2.0;
-				b1 = 0.0;
+            b0 = sin / 2.0;
+            b1 = 0.0;
             b2 = -sin / 2;
-				a0 = 1.0 + alpha;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_bandpass_cpg : config_biquad
       {
-         config_bandpass_cpg(frequency f, std::uint32_t sps, bw _bw)
+         config_bandpass_cpg(frequency f, float sps, bw _bw)
           : config_biquad(f, sps, _bw)
          {
             init();
          }
 
-         config_bandpass_cpg(frequency f, std::uint32_t sps, double q)
+         config_bandpass_cpg(frequency f, float sps, double q)
           : config_biquad(f, sps, q)
          {
             init();
@@ -205,25 +205,25 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = alpha;
-				b1 = 0.0;
-				b2 = -alpha;
-				a0 = 1.0 + alpha;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha;
+            b0 = alpha;
+            b1 = 0.0;
+            b2 = -alpha;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_notch : config_biquad
       {
-         config_notch(frequency f, std::uint32_t sps, bw _bw)
+         config_notch(frequency f, float sps, bw _bw)
           : config_biquad(f, sps, _bw)
          {
             init();
          }
 
-         config_notch(frequency f, std::uint32_t sps, double q)
+         config_notch(frequency f, float sps, double q)
           : config_biquad(f, sps, q)
          {
             init();
@@ -231,19 +231,19 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = 1.0;
-				b1 = -2.0 * cos;
-				b2 = 1.0;
-				a0 = 1.0 + alpha;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha;
+            b0 = 1.0;
+            b1 = -2.0 * cos;
+            b2 = 1.0;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_allpass : config_biquad
       {
-         config_allpass(frequency f, std::uint32_t sps, double q)
+         config_allpass(frequency f, float sps, double q)
           : config_biquad(f, sps, q)
          {
             init();
@@ -251,25 +251,25 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = 1.0 - alpha;
-				b1 = -2.0 * cos;
-				b2 = 1.0 + alpha;
-				a0 = 1.0 + alpha;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha;
+            b0 = 1.0 - alpha;
+            b1 = -2.0 * cos;
+            b2 = 1.0 + alpha;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_peaking : config_biquad_a
       {
-         config_peaking(double db_gain, frequency f, std::uint32_t sps, bw _bw)
+         config_peaking(double db_gain, frequency f, float sps, bw _bw)
           : config_biquad_a(db_gain, f, sps, _bw)
          {
             init();
          }
 
-         config_peaking(double db_gain, frequency f, std::uint32_t sps, double q)
+         config_peaking(double db_gain, frequency f, float sps, double q)
           : config_biquad_a(db_gain, f, sps, q)
          {
             init();
@@ -277,19 +277,19 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = 1.0 + alpha * a;
-				b1 = -2.0 * cos;
-				b2 = 1.0 - alpha * a;
-				a0 = 1.0 + alpha / a;
-				a1 = -2.0 * cos;
-				a2 = 1.0 - alpha / a;
+            b0 = 1.0 + alpha * a;
+            b1 = -2.0 * cos;
+            b2 = 1.0 - alpha * a;
+            a0 = 1.0 + alpha / a;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha / a;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_lowshelf : config_biquad_a
       {
-         config_lowshelf(double db_gain, frequency f, std::uint32_t sps, double q)
+         config_lowshelf(double db_gain, frequency f, float sps, double q)
           : config_biquad_a(db_gain, f, sps, q)
          {
             init();
@@ -297,19 +297,19 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = a * ((a + 1.0) -(a - 1.0) * cos + beta * sin);
-				b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cos);
-				b2 = a * ((a + 1.0) - (a - 1.0) * cos - beta * sin);
-				a0 = (a + 1.0) + (a - 1.0) * cos + beta * sin;
-				a1 = -2.0 * ((a - 1.0) + (a + 1.0) * cos);
-				a2 = (a + 1.0) + (a - 1.0) * cos - beta * sin;
+            b0 = a * ((a + 1.0) -(a - 1.0) * cos + beta * sin);
+            b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cos);
+            b2 = a * ((a + 1.0) - (a - 1.0) * cos - beta * sin);
+            a0 = (a + 1.0) + (a - 1.0) * cos + beta * sin;
+            a1 = -2.0 * ((a - 1.0) + (a + 1.0) * cos);
+            a2 = (a + 1.0) + (a - 1.0) * cos - beta * sin;
          }
       };
 
       /////////////////////////////////////////////////////////////////////////
       struct config_highshelf : config_biquad_a
       {
-         config_highshelf(double db_gain, frequency f, std::uint32_t sps, double q)
+         config_highshelf(double db_gain, frequency f, float sps, double q)
           : config_biquad_a(db_gain, f, sps, q)
          {
             init();
@@ -317,12 +317,12 @@ namespace cycfi { namespace q
 
          void init()
          {
-				b0 = a * ((a + 1.0) + (a - 1.0) * cos + beta * sin);
-				b1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * cos);
-				b2 = a * ((a + 1.0) + (a - 1.0) * cos - beta * sin);
-				a0 = (a + 1.0) - (a - 1.0) * cos + beta * sin;
-				a1 = 2.0 * ((a - 1.0) - (a + 1.0) * cos);
-				a2 = (a + 1.0) - (a - 1.0) * cos - beta * sin;
+            b0 = a * ((a + 1.0) + (a - 1.0) * cos + beta * sin);
+            b1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * cos);
+            b2 = a * ((a + 1.0) + (a - 1.0) * cos - beta * sin);
+            a0 = (a + 1.0) - (a - 1.0) * cos + beta * sin;
+            a1 = 2.0 * ((a - 1.0) - (a + 1.0) * cos);
+            a2 = (a + 1.0) - (a - 1.0) * cos - beta * sin;
          }
       };
    }
@@ -332,11 +332,11 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct lowpass : biquad
    {
-      lowpass(frequency f, std::uint32_t sps, double q = 0.707)
+      lowpass(frequency f, float sps, double q = 0.707)
        : biquad(detail::config_lowpass(f, sps, q).make())
       {}
 
-      void config(frequency f, std::uint32_t sps, double q = 0.707)
+      void config(frequency f, float sps, double q = 0.707)
       {
          detail::config_lowpass(f, sps, q).config(*this);
       }
@@ -347,11 +347,11 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct highpass : biquad
    {
-      highpass(frequency f, std::uint32_t sps, double q = 0.707)
+      highpass(frequency f, float sps, double q = 0.707)
        : biquad(detail::config_highpass(f, sps, q).make())
       {}
 
-      void config(frequency f, std::uint32_t sps, double q = 0.707)
+      void config(frequency f, float sps, double q = 0.707)
       {
          detail::config_highpass(f, sps, q).config(*this);
       }
@@ -362,20 +362,20 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct bandpass_csg : biquad
    {
-      bandpass_csg(frequency f, std::uint32_t sps, bw _bw)
+      bandpass_csg(frequency f, float sps, bw _bw)
        : biquad(detail::config_bandpass_csg(f, sps, _bw).make())
       {}
 
-      bandpass_csg(frequency f, std::uint32_t sps, double q = 0.707)
+      bandpass_csg(frequency f, float sps, double q = 0.707)
        : biquad(detail::config_bandpass_csg(f, sps, q).make())
       {}
 
-      void config(frequency f, std::uint32_t sps, bw _bw)
+      void config(frequency f, float sps, bw _bw)
       {
          detail::config_bandpass_csg(f, sps, _bw).config(*this);
       }
 
-      void config(frequency f, std::uint32_t sps, double q = 0.707)
+      void config(frequency f, float sps, double q = 0.707)
       {
          detail::config_bandpass_csg(f, sps, q).config(*this);
       }
@@ -386,20 +386,20 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct bandpass_cpg : biquad
    {
-      bandpass_cpg(frequency f, std::uint32_t sps, bw _bw)
+      bandpass_cpg(frequency f, float sps, bw _bw)
        : biquad(detail::config_bandpass_cpg(f, sps, _bw).make())
       {}
 
-      bandpass_cpg(frequency f, std::uint32_t sps, double q = 0.707)
+      bandpass_cpg(frequency f, float sps, double q = 0.707)
        : biquad(detail::config_bandpass_cpg(f, sps, q).make())
       {}
 
-      void config(frequency f, std::uint32_t sps, bw _bw)
+      void config(frequency f, float sps, bw _bw)
       {
          detail::config_bandpass_cpg(f, sps, _bw).config(*this);
       }
 
-      void config(frequency f, std::uint32_t sps, double q = 0.707)
+      void config(frequency f, float sps, double q = 0.707)
       {
          detail::config_bandpass_cpg(f, sps, q).config(*this);
       }
@@ -410,11 +410,11 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct allpass : biquad
    {
-      allpass(frequency f, std::uint32_t sps, double q = 0.707)
+      allpass(frequency f, float sps, double q = 0.707)
        : biquad(detail::config_allpass(f, sps, q).make())
       {}
 
-      void config(frequency f, std::uint32_t sps, double q = 0.707)
+      void config(frequency f, float sps, double q = 0.707)
       {
          detail::config_allpass(f, sps, q).config(*this);
       }
@@ -425,44 +425,44 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct notch : biquad
    {
-      notch(frequency f, std::uint32_t sps, bw _bw)
+      notch(frequency f, float sps, bw _bw)
        : biquad(detail::config_notch(f, sps, _bw).make())
       {}
 
-      notch(frequency f, std::uint32_t sps, double q = 0.707)
+      notch(frequency f, float sps, double q = 0.707)
        : biquad(detail::config_notch(f, sps, q).make())
       {}
 
-      void config(frequency f, std::uint32_t sps, bw _bw)
+      void config(frequency f, float sps, bw _bw)
       {
          detail::config_notch(f, sps, _bw).config(*this);
       }
 
-      void config(frequency f, std::uint32_t sps, double q = 0.707)
+      void config(frequency f, float sps, double q = 0.707)
       {
          detail::config_notch(f, sps, q).config(*this);
       }
    };
 
    ////////////////////////////////////////////////////////////////////////////
-   // Peaking band EQ filter
+   // Peaking filter
    ////////////////////////////////////////////////////////////////////////////
    struct peaking : biquad
    {
-      peaking(double db_gain, frequency f, std::uint32_t sps, bw _bw)
+      peaking(double db_gain, frequency f, float sps, bw _bw)
        : biquad(detail::config_peaking(db_gain, f, sps, _bw).make())
       {}
 
-      peaking(double db_gain, frequency f, std::uint32_t sps, double q = 0.707)
+      peaking(double db_gain, frequency f, float sps, double q = 0.707)
        : biquad(detail::config_peaking(db_gain, f, sps, q).make())
       {}
 
-      void config(double db_gain, frequency f, std::uint32_t sps, bw _bw)
+      void config(double db_gain, frequency f, float sps, bw _bw)
       {
          detail::config_peaking(db_gain, f, sps, _bw).config(*this);
       }
 
-      void config(double db_gain, frequency f, std::uint32_t sps, double q = 0.707)
+      void config(double db_gain, frequency f, float sps, double q = 0.707)
       {
          detail::config_peaking(db_gain, f, sps, q).config(*this);
       }
@@ -473,11 +473,11 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct lowshelf : biquad
    {
-      lowshelf(double db_gain, frequency f, std::uint32_t sps, double q = 0.707)
+      lowshelf(double db_gain, frequency f, float sps, double q = 0.707)
        : biquad(detail::config_lowshelf(db_gain, f, sps, q).make())
       {}
 
-      void config(double db_gain, frequency f, std::uint32_t sps, double q = 0.707)
+      void config(double db_gain, frequency f, float sps, double q = 0.707)
       {
          detail::config_lowshelf(db_gain, f, sps, q).config(*this);
       }
@@ -488,15 +488,15 @@ namespace cycfi { namespace q
    ////////////////////////////////////////////////////////////////////////////
    struct highshelf : biquad
    {
-      highshelf(double db_gain, frequency f, std::uint32_t sps, double q = 0.707)
+      highshelf(double db_gain, frequency f, float sps, double q = 0.707)
        : biquad(detail::config_highshelf(db_gain, f, sps, q).make())
       {}
 
-      void config(double db_gain, frequency f, std::uint32_t sps, double q = 0.707)
+      void config(double db_gain, frequency f, float sps, double q = 0.707)
       {
          detail::config_highshelf(db_gain, f, sps, q).config(*this);
       }
    };
-}}
+}
 
 #endif

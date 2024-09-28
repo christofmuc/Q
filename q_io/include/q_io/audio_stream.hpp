@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2016-2019 Cycfi Research. All rights reserved.
+   Copyright (c) 2016-2023 Cycfi Research. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -10,29 +10,28 @@
 #include <q_io/audio_device.hpp>
 #include <q/support/audio_stream.hpp>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
    ////////////////////////////////////////////////////////////////////////////
-   class port_audio_stream : public audio_stream
+   class audio_stream : public audio_stream_base
    {
    public:
+                              audio_stream(
+                                 std::size_t input_channels
+                               , std::size_t output_channels
+                               , double sps = -1
+                               , int frames = -1
+                              );
 
-      port_audio_stream(
-         std::size_t input_channels
-       , std::size_t output_channels
-       , int sps = -1
-       , int frames = -1
-      );
+                              audio_stream(
+                                 audio_device const& device
+                               , std::size_t input_channels
+                               , std::size_t output_channels
+                               , double sps = -1
+                               , int frames = -1
+                              );
 
-      port_audio_stream(
-         audio_device const& device
-       , std::size_t input_channels
-       , std::size_t output_channels
-       , int sps = -1
-       , int frames = -1
-      );
-
-      virtual ~port_audio_stream();
+      virtual                 ~audio_stream();
 
       void                    start();
       void                    stop();
@@ -44,7 +43,7 @@ namespace cycfi { namespace q
 
       duration                input_latency() const;
       duration                output_latency() const;
-      std::uint32_t           sampling_rate() const;
+      double                  sampling_rate() const;
       std::size_t             input_channels() const  { return _input_channels; }
       std::size_t             output_channels() const { return _output_channels; }
 
@@ -55,6 +54,9 @@ namespace cycfi { namespace q
       std::size_t             _output_channels;
       char const*             _error;
    };
-}}
+
+   using port_audio_stream [[deprecated("Use audio_stream instead.")]]
+      = audio_stream;
+}
 
 #endif

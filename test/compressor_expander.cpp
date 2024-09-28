@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -19,7 +19,7 @@ void process(std::string name)
    // Read audio file
 
    q::wav_reader src{"audio_files/" + name + ".wav"};
-   std::uint32_t const sps = src.sps();
+   float const sps = src.sps();
 
    std::vector<float> in(src.length());
    src.read(in);
@@ -54,18 +54,18 @@ void process(std::string name)
       out[ch1] = s;
 
       // Envelope
-      q::decibel env_out = env(std::abs(s));
+      auto env_out = q::lin_to_db(env(std::abs(s)));
 
       // Compressor
-      auto gain = float(comp(env_out)) * makeup_gain;
+      auto gain = lin_float(comp(env_out)) * makeup_gain;
       out[ch2] = s * gain;
 
       // Soft Knee Compressor
-      gain = float(comp2(env_out)) * makeup_gain;
+      gain = lin_float(comp2(env_out)) * makeup_gain;
       out[ch3] = s * gain;
 
       // Expander
-      gain = float(exp(env_out));
+      gain = lin_float(exp(env_out));
       out[ch4] = s * gain;
    }
 

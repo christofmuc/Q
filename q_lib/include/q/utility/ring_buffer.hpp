@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -10,8 +10,9 @@
 #include <array>
 #include <q/support/base.hpp>
 #include <q/detail/init_store.hpp>
+#include <q/utility/interpolation.hpp>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
    ////////////////////////////////////////////////////////////////////////////
    // ring_buffer
@@ -23,11 +24,13 @@ namespace cycfi { namespace q
 
       using value_type = T;
       using storage_type = Storage;
+      using index_type = std::size_t;
+      using interpolation_type = sample_interpolation::none;
 
-      explicit ring_buffer();
-      explicit ring_buffer(std::size_t size);
-      ring_buffer(ring_buffer const& rhs) = default;
-      ring_buffer(ring_buffer&& rhs) = default;
+                        explicit ring_buffer();
+                        explicit ring_buffer(std::size_t size);
+                        ring_buffer(ring_buffer const& rhs) = default;
+                        ring_buffer(ring_buffer&& rhs) = default;
 
       ring_buffer&      operator=(ring_buffer const& rhs) = default;
       ring_buffer&      operator=(ring_buffer&& rhs) = default;
@@ -42,6 +45,9 @@ namespace cycfi { namespace q
       T&                operator[](std::size_t index);
       void              clear();
       void              pop_front();
+
+      Storage&          store();
+      const Storage&    store() const;
 
    private:
 
@@ -138,11 +144,26 @@ namespace cycfi { namespace q
          e = T();
    }
 
+   // Remove the front element
    template <typename T, typename Storage>
    inline void ring_buffer<T, Storage>::pop_front()
    {
       ++_pos;
    }
-}}
+
+   // Raw access to the data storage
+   template <typename T, typename Storage>
+   inline Storage& ring_buffer<T, Storage>::store()
+   {
+      return _data;
+   }
+
+   // Raw access to the data storage
+   template <typename T, typename Storage>
+   inline const Storage& ring_buffer<T, Storage>::store() const
+   {
+      return _data;
+   }
+}
 
 #endif

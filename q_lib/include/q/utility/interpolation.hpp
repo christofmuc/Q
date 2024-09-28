@@ -1,5 +1,5 @@
 /*=============================================================================
-   Copyright (c) 2014-2019 Joel de Guzman. All rights reserved.
+   Copyright (c) 2014-2024 Joel de Guzman. All rights reserved.
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =============================================================================*/
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace cycfi { namespace q
+namespace cycfi::q
 {
    namespace sample_interpolation
    {
@@ -35,6 +35,6 @@ namespace cycfi { namespace q
          }
       };
    }
-}}
+}
 
 #endif
